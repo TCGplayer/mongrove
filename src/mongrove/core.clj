@@ -1,44 +1,44 @@
 (ns ^{:author "Rhishikesh Joshi <rhishikesh@helpshift.com>", :doc "A clojure wrapper over the official MongoDB java driver"} mongrove.core
   (:refer-clojure :exclude [update])
   (:require
-    [clojure.set :as cset]
-    [clojure.tools.logging :as ctl]
-    [mongrove.conversion :as conversion])
+   [clojure.set :as cset]
+   [clojure.tools.logging :as ctl]
+   [mongrove.conversion :as conversion])
   (:import
-    (com.mongodb
-      Block
-      ClientSessionOptions
-      ClientSessionOptions$Builder
-      MongoClientSettings
-      MongoClientSettings$Builder
-      MongoCredential
-      ReadConcern
-      ReadPreference
-      ServerAddress
-      TransactionOptions
-      TransactionOptions$Builder
-      WriteConcern)
-    (com.mongodb.client
-      ClientSession
-      FindIterable
-      DistinctIterable
-      MongoClient
-      MongoClients
-      MongoCollection
-      MongoCursor
-      MongoDatabase)
-    (com.mongodb.client.model
-      IndexOptions
-      Indexes
-      Projections
-      Sorts
-      UpdateOptions)
-    (com.mongodb.connection
-      ClusterSettings
-      ConnectionPoolSettings
-      SocketSettings)
-    org.bson.Document
-    org.bson.conversions.Bson))
+   (com.mongodb
+    Block
+    ClientSessionOptions
+    ClientSessionOptions$Builder
+    MongoClientSettings
+    MongoClientSettings$Builder
+    MongoCredential
+    ReadConcern
+    ReadPreference
+    ServerAddress
+    TransactionOptions
+    TransactionOptions$Builder
+    WriteConcern)
+   (com.mongodb.client
+    ClientSession
+    FindIterable
+    DistinctIterable
+    MongoClient
+    MongoClients
+    MongoCollection
+    MongoCursor
+    MongoDatabase)
+   (com.mongodb.client.model
+    IndexOptions
+    Indexes
+    Projections
+    Sorts
+    UpdateOptions)
+   (com.mongodb.connection
+    ClusterSettings
+    ConnectionPoolSettings
+    SocketSettings)
+   org.bson.Document
+   org.bson.conversions.Bson))
 
 
 (declare ->server-address ->projections)
@@ -325,9 +325,9 @@
    (let [collection (get-collection db coll)
          bson-query (conversion/to-bson-document query)
          iterator (doto ^FindIterable
-                      (if session
-                        (.find ^MongoCollection collection session bson-query)
-                        (.find ^MongoCollection collection bson-query))
+                   (if session
+                     (.find ^MongoCollection collection session bson-query)
+                     (.find ^MongoCollection collection bson-query))
                     (.projection (->projections only exclude)))]
      (clean (conversion/from-bson-document (.first ^FindIterable iterator) true)))))
 
@@ -348,9 +348,9 @@
         sort (when sort-by
                (reduce-kv #(assoc %1 %2 (int %3)) {} sort-by))
         iterator (doto ^FindIterable
-                     (if session
-                       (.find ^MongoCollection collection session bson-query)
-                       (.find ^MongoCollection collection bson-query))
+                  (if session
+                    (.find ^MongoCollection collection session bson-query)
+                    (.find ^MongoCollection collection bson-query))
                    (.projection (->projections only exclude))
                    (.sort (conversion/to-bson-document sort))
                    (.limit (if one? 1 limit))
@@ -359,6 +359,13 @@
         cursor (.cursor iterator)]
     (clean (m-cursor-iterate cursor true))))
 
+(defn ^:public-api aggregate
+  "Execute an aggregation pipeline on a collection."
+  [db ^String coll bson-pipeline]
+  (let [collection (get-collection db coll)
+        result (.aggregate ^MongoCollection collection
+                           bson-pipeline)]
+    (m-cursor-iterate (.iterator result) true)))
 
 (defn ^:public-api count-docs
   "Count documents in a collection.
@@ -534,9 +541,7 @@
 
   (create-index test-db mongo-coll (array-map :a 1 :b -1) nil)
 
-  (get-indexes test-db mongo-coll)
-
-  )
+  (get-indexes test-db mongo-coll))
 
 
 ;; Transactions
@@ -622,22 +627,22 @@
 
 
 (defn- exec-transaction
-    [^MongoClient client body-fn
-     {:keys [transaction-specs]}]
-    (let [transaction-specs (merge default-transaction-opts
-                                   transaction-specs)
-          session (start-transaction client transaction-specs)]
-      (try
+  [^MongoClient client body-fn
+   {:keys [transaction-specs]}]
+  (let [transaction-specs (merge default-transaction-opts
+                                 transaction-specs)
+        session (start-transaction client transaction-specs)]
+    (try
         ;; Create a ClientSession object from
         ;; com.mongodb.client.MongoClient.startSession(ClientSessionOptions)
         ;; Create client session options from ClientSessionOptions.Builder
-        (let [result (eval (body-fn session))]
-          (commit-transaction session)
-          result)
-        (catch Exception ex
-          (throw ex))
-        (finally
-          (.close ^com.mongodb.client.ClientSession session)))))
+      (let [result (eval (body-fn session))]
+        (commit-transaction session)
+        result)
+      (catch Exception ex
+        (throw ex))
+      (finally
+        (.close ^com.mongodb.client.ClientSession session)))))
 
 
 (let [retryable-errors #{"TransientTransactionError"}]
@@ -697,5 +702,4 @@
                           (insert test-db "b" {:b (.toString nil)} :session session))
                         {:transaction-opts {:retry-on-errors true}})
     (catch Exception e
-      (println "Data in collection a " (query test-db "a" {}))))
-  )
+      (println "Data in collection a " (query test-db "a" {})))))

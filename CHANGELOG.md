@@ -1,6 +1,10 @@
 # Change Log
 All notable changes to this project will be documented in this file.
 
+## [0.2.2]
+### Changed
+- Add support for aggregate with aggregation pipeline
+
 ## [0.2.0]
 ### Changed
 - Add support for multi-document Transactions with MongoDB 4.0
